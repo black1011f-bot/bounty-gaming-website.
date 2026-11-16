@@ -31,11 +31,11 @@ jobs:
         shell: pwsh
         working-directory: D:\\a\\src\\bounty-dex\\windows
         run: |
-          pyinstaller --noconfirm --clean --windowed --name BOUNTY-Dex --collect-all PySide6 bounty_dex.py
+          pyinstaller --noconfirm --clean --onefile --windowed --name BOUNTY-Dex --collect-all PySide6 bounty_dex.py
       - name: Zip Windows build
         shell: pwsh
         working-directory: D:\\a\\src
-        run: Compress-Archive -Path bounty-dex/windows/dist/BOUNTY-Dex -DestinationPath BOUNTY-Dex-Windows.zip
+        run: Compress-Archive -Path bounty-dex/windows/dist/BOUNTY-Dex.exe -DestinationPath BOUNTY-Dex-Windows.zip
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
