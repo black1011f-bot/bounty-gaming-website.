@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 # In a PyInstaller build, keep tools beside the EXE, not in the temporary bundle.
-ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
 ADB = str(ROOT / "tools" / "platform-tools" / "adb.exe")
 SCRCPY = str(ROOT / "tools" / "scrcpy" / "scrcpy.exe")
 
@@ -242,7 +242,7 @@ class BountyDex(QMainWindow):
         ll.addWidget(self.log)
         main.addWidget(log_panel)
 
-        self.write("BOUNTY Dex 0.2 запущен.")
+        self.write("BOUNTY Dex 0.3 запущен.")
         missing = []
         if not self.adb:
             missing.append("ADB")
