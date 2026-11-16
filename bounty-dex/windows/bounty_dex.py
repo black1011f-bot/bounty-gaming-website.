@@ -32,38 +32,38 @@ class BountyDex(QMainWindow):
 
     def build_ui(self):
         self.setStyleSheet("""
-          QWidget { background:#10131b; color:#edf1ff; font-family:'Segoe UI'; }
-          QFrame#panel { background:#191f2c; border:1px solid #2b3447; border-radius:16px; }
-          QLabel#brand { font-size:27px; font-weight:800; }
-          QLabel#muted { color:#9ba8bd; }
-          QLabel#heading { font-size:21px; font-weight:700; }
-          QPushButton { background:#29354b; border:1px solid #3b4963; border-radius:10px; padding:11px 15px; font-weight:600; }
-          QPushButton:hover { background:#394966; }
-          QPushButton#primary { background:#6473ee; border:0; }
-          QLineEdit,QComboBox { background:#101622; border:1px solid #3b4963; border-radius:9px; padding:10px; }
-          QPlainTextEdit { background:#0c111a; border:1px solid #29354b; border-radius:10px; padding:8px; color:#bfcae0; }
+          QWidget { background:#f5f5f7; color:#1d1d1f; font-family:'Segoe UI'; font-size:13px; }
+          QFrame#panel { background:rgba(255,255,255,0.94); border:1px solid #e5e5ea; border-radius:20px; }
+          QLabel#brand { font-size:25px; font-weight:750; letter-spacing:-1px; }
+          QLabel#muted { color:#86868b; }
+          QLabel#heading { font-size:21px; font-weight:700; letter-spacing:-.4px; }
+          QPushButton { background:#e9e9ed; color:#1d1d1f; border:1px solid #dedee3; border-radius:12px; padding:11px 15px; font-weight:600; }
+          QPushButton:hover { background:#dedee5; }
+          QPushButton#primary { background:#007aff; color:white; border:0; }
+          QLineEdit,QComboBox { background:#f7f7f9; border:1px solid #dedee3; border-radius:11px; padding:11px; color:#1d1d1f; }
+          QPlainTextEdit { background:#fafafd; border:1px solid #e5e5ea; border-radius:12px; padding:9px; color:#48484a; }
         """)
         root = QWidget()
         self.setCentralWidget(root)
         outer = QHBoxLayout(root)
-        outer.setContentsMargins(20,20,20,20)
+        outer.setContentsMargins(22,22,22,22)
         outer.setSpacing(18)
 
         sidebar = QFrame()
         sidebar.setObjectName("panel")
-        sidebar.setFixedWidth(220)
+        sidebar.setFixedWidth(225)
         sl = QVBoxLayout(sidebar)
         sl.setContentsMargins(18,20,18,18)
         brand = QLabel("BOUNTY <span style='color:#8290ff'>Dex</span>")
         brand.setObjectName("brand")
         sl.addWidget(brand)
-        caption = QLabel("ANDROID DESKTOP EXPERIENCE")
+        caption = QLabel("YOUR PHONE. YOUR DESKTOP.")
         caption.setObjectName("muted")
         sl.addWidget(caption)
         sl.addSpacing(28)
-        for item in ("▦  Рабочий стол", "▣  Подключение", "⚙  Настройки"):
+        for item in ("⌂  Рабочий стол", "◉  Подключение", "⚙  Настройки"):
             b = QPushButton(item)
-            b.setStyleSheet("text-align:left")
+            b.setStyleSheet("text-align:left; padding:13px; background:transparent; border:0;")
             sl.addWidget(b)
         sl.addStretch()
         sl.addWidget(QLabel("Prototype 0.1"))
@@ -74,10 +74,10 @@ class BountyDex(QMainWindow):
         outer.addLayout(main,1)
         head = QHBoxLayout()
         titles = QVBoxLayout()
-        title = QLabel("Рабочий стол")
+        title = QLabel("Добро пожаловать")
         title.setObjectName("heading")
         titles.addWidget(title)
-        sub = QLabel("Подключи Android-смартфон и управляй им с компьютера")
+        sub = QLabel("Подключи телефон и продолжай работу на большом экране.")
         sub.setObjectName("muted")
         titles.addWidget(sub)
         head.addLayout(titles)
@@ -123,10 +123,10 @@ class BountyDex(QMainWindow):
         grid = QGridLayout()
         grid.setSpacing(12)
         for i,(tag,heading,desc) in enumerate([
-            ("ЗЕРКАЛИРОВАНИЕ","Экран телефона","Трансляция в отдельном окне scrcpy."),
-            ("УПРАВЛЕНИЕ","Мышь и клавиатура","Ввод передаётся на Android через scrcpy."),
-            ("ПОДКЛЮЧЕНИЕ","USB + Wi-Fi","Кабель или локальная беспроводная сеть."),
-            ("ДАЛЬШЕ","Интерфейс DeX","Встраивание экрана и файловый обмен — следующие этапы.")
+            ("ЭКРАН","Зеркалирование","Открой экран смартфона в отдельном окне."),
+            ("ВВОД","Мышь и клавиатура","Управляй телефоном с помощью scrcpy."),
+            ("СВЯЗЬ","USB и Wi-Fi","Выбери удобный способ подключения."),
+            ("BOUNTY DEX","Пространство для работы","Обновления интерфейса и функции будут добавляться.")
         ]):
             card = QFrame()
             card.setObjectName("panel")
