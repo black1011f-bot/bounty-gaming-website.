@@ -5,11 +5,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt
+from PySide6.QtCore import QByteArray, QProcess, Qt
+from PySide6.QtGui import QIcon, QPixmap, QPainter
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-    QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+    QPlainTextEdit, QPushButton, QVBoxLayout, QWidget, QDialog, QScrollArea
 )
 
 # In a PyInstaller build, keep tools beside the EXE, not in the temporary bundle.
@@ -17,6 +20,23 @@ ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) el
 ADB = str(ROOT / "tools" / "platform-tools" / "adb.exe")
 SCRCPY = str(ROOT / "tools" / "scrcpy" / "scrcpy.exe")
 
+
+
+SVG = {
+ "refresh": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3" fill="none" stroke="#dceaff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ "usb": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3v18m0-18 3 3m-3-3L9 6m3 15 4-3m-4 3-4-3M8 11H5V8m11 3h3V8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ "wifi": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0m-11 3a6 6 0 0 1 8 0M12 19h.01" fill="none" stroke="#dceaff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+ "apps": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2" fill="none" stroke="#dceaff" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="2" fill="none" stroke="#dceaff" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="2" fill="none" stroke="#dceaff" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="2" fill="none" stroke="#dceaff" stroke-width="1.8"/></svg>',
+ "launch": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>'
+}
+def make_svg_icon(source, size=18):
+    renderer = QSvgRenderer(QByteArray(source.encode("utf-8")))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
 
 def find_tool(local_path, command_name):
     return local_path if Path(local_path).is_file() else shutil.which(command_name)
@@ -96,6 +116,10 @@ class BountyDex(QMainWindow):
         titles.addWidget(sub)
         head.addLayout(titles)
         head.addStretch()
+        guide_button = QPushButton("Как пользоваться")
+        guide_button.setIcon(make_svg_icon(SVG["apps"]))
+        guide_button.clicked.connect(self.show_guide)
+        head.addWidget(guide_button)
         self.status = QLabel("● Проверка компонентов")
         self.status.setStyleSheet("color:#f5c451;font-weight:700")
         head.addWidget(self.status)
@@ -117,9 +141,11 @@ class BountyDex(QMainWindow):
         self.devices.setMinimumWidth(220)
         row.addWidget(self.devices, 1)
         refresh = QPushButton("Обновить")
+        refresh.setIcon(make_svg_icon(SVG["refresh"]))
         refresh.clicked.connect(self.refresh_devices)
         row.addWidget(refresh)
         usb = QPushButton("Зеркалировать USB")
+        usb.setIcon(make_svg_icon(SVG["usb"]))
         usb.setObjectName("primary")
         usb.clicked.connect(self.connect_usb)
         row.addWidget(usb)
@@ -130,6 +156,7 @@ class BountyDex(QMainWindow):
         self.ip.setPlaceholderText("IP телефона, например 192.168.1.25")
         wifirow.addWidget(self.ip, 1)
         wifi = QPushButton("Подключить по Wi-Fi")
+        wifi.setIcon(make_svg_icon(SVG["wifi"]))
         wifi.clicked.connect(self.connect_wifi)
         wifirow.addWidget(wifi)
         pl.addLayout(wifirow)
@@ -155,6 +182,7 @@ class BountyDex(QMainWindow):
         self.app_filter.textChanged.connect(self.filter_apps)
         searchrow.addWidget(self.app_filter, 1)
         app_refresh = QPushButton("Загрузить все")
+        app_refresh.setIcon(make_svg_icon(SVG["refresh"]))
         app_refresh.clicked.connect(self.load_apps)
         searchrow.addWidget(app_refresh)
         al.addLayout(searchrow)
@@ -170,6 +198,7 @@ class BountyDex(QMainWindow):
         app_note.setObjectName("muted")
         app_actions.addWidget(app_note, 1)
         launch = QPushButton("Открыть приложение")
+        launch.setIcon(make_svg_icon(SVG["launch"]))
         launch.setObjectName("primary")
         launch.clicked.connect(self.launch_selected_app)
         app_actions.addWidget(launch)
@@ -226,6 +255,71 @@ class BountyDex(QMainWindow):
         else:
             self.status.setText("● Компоненты готовы")
             self.status.setStyleSheet("color:#65d69a;font-weight:700")
+
+
+    def show_guide(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("BOUNTY Dex — инструкция")
+        dialog.resize(760, 690)
+        dialog.setMinimumSize(620, 520)
+        dialog.setStyleSheet("QDialog{background:#0d0f14;color:#f5f5f7;} QLabel{color:#f5f5f7;} QLabel#muted{color:#a0a5b2;} QFrame#guideCard{background:#171a22;border:1px solid #292e3a;border-radius:16px;} QScrollArea{border:0;background:transparent;}")
+        outer = QVBoxLayout(dialog)
+        title = QLabel("Подключи Samsung к компьютеру")
+        title.setStyleSheet("font-size:22px;font-weight:800")
+        outer.addWidget(title)
+        intro = QLabel("Иллюстрированная инструкция для первого запуска BOUNTY Dex.")
+        intro.setObjectName("muted")
+        outer.addWidget(intro)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        column = QVBoxLayout(content)
+        column.setSpacing(12)
+
+        def add_step(number, heading, description, art):
+            card = QFrame()
+            card.setObjectName("guideCard")
+            row = QHBoxLayout(card)
+            row.setContentsMargins(14, 12, 14, 12)
+            illustration = QSvgWidget()
+            illustration.load(QByteArray(art.encode("utf-8")))
+            illustration.setFixedSize(116, 100)
+            row.addWidget(illustration)
+            text_col = QVBoxLayout()
+            h = QLabel(f"{number}. {heading}")
+            h.setStyleSheet("font-size:15px;font-weight:750")
+            p = QLabel(description)
+            p.setObjectName("muted")
+            p.setWordWrap(True)
+            text_col.addWidget(h)
+            text_col.addWidget(p)
+            text_col.addStretch()
+            row.addLayout(text_col, 1)
+            column.addWidget(card)
+
+        phone = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 100"><rect x="35" y="3" width="46" height="94" rx="9" fill="#26364c" stroke="#8ba6c7"/><rect x="40" y="12" width="36" height="74" rx="4" fill="#101824"/><rect x="45" y="22" width="26" height="6" rx="2" fill="#0a84ff"/><rect x="45" y="35" width="26" height="4" rx="2" fill="#637b99"/><rect x="45" y="44" width="26" height="4" rx="2" fill="#637b99"/><circle cx="58" cy="91" r="2" fill="#91a4bc"/></svg>'
+        taps = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 100"><rect x="12" y="12" width="92" height="76" rx="9" fill="#182538" stroke="#536b88"/><text x="23" y="32" fill="#9db2cc" font-size="8">Номер сборки</text><rect x="20" y="40" width="76" height="30" rx="6" fill="#24466a"/><text x="58" y="59" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">7 ×</text></svg>'
+        usb = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 100"><path d="M58 12v67m0-67 9 9m-9-9-9 9m9 58 13-12m-13 12L45 67M45 44H29V29" fill="none" stroke="#82bfff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="20" y="18" width="15" height="15" rx="4" fill="#0a84ff"/><circle cx="58" cy="83" r="5" fill="#0a84ff"/></svg>'
+        pc = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 100"><rect x="5" y="13" width="106" height="66" rx="7" fill="#26364c" stroke="#8ba6c7"/><rect x="11" y="19" width="94" height="54" rx="3" fill="#0d1522"/><rect x="18" y="27" width="80" height="9" rx="3" fill="#1b3653"/><rect x="18" y="42" width="35" height="23" rx="4" fill="#0a84ff"/><rect x="59" y="42" width="39" height="23" rx="4" fill="#25364b"/><path d="M43 80h30l7 7H36z" fill="#667a94"/></svg>'
+        add_step(1, "Открой параметры телефона", "Настройки → Сведения о телефоне → Сведения о ПО.", phone)
+        add_step(2, "Включи режим разработчика", "Найди «Номер сборки» и нажми на него 7 раз. При необходимости введи PIN-код.", taps)
+        add_step(3, "Разреши USB-отладку", "Параметры разработчика → USB-отладка. Подключи кабель и подтверди запрос на экране телефона.", usb)
+        add_step(4, "Запусти зеркалирование", "В BOUNTY Dex нажми «Обновить», выбери Samsung и нажми «Зеркалировать USB».", pc)
+        wifi_note = QLabel("<b>Wi-Fi:</b> телефон и ПК должны быть в одной сети. Сначала подключи USB, затем введи IP телефона в поле Wi-Fi. На новых версиях Android может потребоваться сопряжение в «Беспроводной отладке».")
+        wifi_note.setWordWrap(True)
+        wifi_note.setStyleSheet("background:#17263a;border:1px solid #2d4b6d;border-radius:12px;padding:13px;color:#dceaff;")
+        column.addWidget(wifi_note)
+        note = QLabel("<b>Важно:</b> для зеркалирования нужны ADB и полный пакет scrcpy в папках tools/platform-tools и tools/scrcpy рядом с EXE. APK на телефоне — помощник с инструкциями; трансляцию выполняет программа Windows.")
+        note.setWordWrap(True)
+        note.setObjectName("muted")
+        column.addWidget(note)
+        scroll.setWidget(content)
+        outer.addWidget(scroll, 1)
+        close = QPushButton("Понятно")
+        close.setObjectName("primary")
+        close.clicked.connect(dialog.accept)
+        outer.addWidget(close)
+        dialog.exec()
 
     def write(self, message):
         self.log.appendPlainText(str(message))
