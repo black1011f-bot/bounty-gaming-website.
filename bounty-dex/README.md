@@ -44,12 +44,15 @@ For Wi-Fi, the phone and PC must be on the same network.
 - USB ADB device detection
 - ADB-over-Wi-Fi for devices that permit TCP/IP mode
 - Launcher-app listing, search and launch
-- Screen mirroring and mouse/keyboard control via scrcpy
+- Live screen streaming and mouse/keyboard control via scrcpy
+- Landscape / portrait display rotation controls for the PC mirror
+- Stream resolution presets (720p, 1280p, 1600p, 1920p) and 30/45/60 FPS limits
+- Clipboard synchronization and keep-awake while streaming
 - Dark interface and illustrated Russian setup guide
 
 ## Important limitations
 
-BOUNTY Dex currently provides screen mirroring and remote input; it is **not** a full Samsung DeX replacement. The mirrored phone screen opens in a separate scrcpy window. Android apps continue running on the phone; this app cannot force every Android app into desktop/freeform windows. Do not authorize ADB access on a computer you do not trust.
+BOUNTY Dex currently provides live screen mirroring and remote input; it is **not** a full Samsung DeX replacement. The orientation selector rotates the mirrored image on the PC. It cannot force an Android app that does not support landscape mode to redesign its interface. Use Alt+R in the scrcpy window to request a device orientation switch; the foreground app may refuse it. Resolution presets limit the stream size while preserving the phone's aspect ratio. For a low-powered PC, start with 720p and 30 FPS. The mirrored phone screen opens in a separate scrcpy window. Android apps continue running on the phone; this app cannot force every Android app into desktop/freeform windows. Do not authorize ADB access on a computer you do not trust.
 
 ## Build from source
 
