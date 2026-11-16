@@ -42,6 +42,42 @@ def find_tool(local_path, command_name):
     return local_path if Path(local_path).is_file() else shutil.which(command_name)
 
 
+def parse_adb_devices(output):
+    devices = []
+    for line in output.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) > 1 and parts[1] == "device":
+            devices.append(parts[0])
+    return devices
+
+
+def build_virtual_app_args(serial, package_name, width, fps):
+    if not re.fullmatch(r"[A-Za-z0-9_.$]+", package_name or ""):
+        raise ValueError("Некорректное имя Android-пакета.")
+    width = int(width)
+    fps = int(fps)
+    if width not in (720, 1280, 1600, 1920):
+        raise ValueError("Неподдерживаемое разрешение рабочего окна.")
+    if fps not in (30, 45, 60):
+        raise ValueError("Неподдерживаемая частота кадров.")
+    height = max(450, round(width * 10 / 16))
+    args = ["-s", serial] if serial else []
+    args.extend([
+        "--window-title=BOUNTY Dex — " + package_name,
+        "--new-display=" + str(width) + "x" + str(height) + "/160",
+        "--flex-display",
+        "--start-app=" + package_name,
+        "--no-vd-destroy-content",
+        "--mouse=uhid",
+        "--keyboard=sdk",
+        "--display-ime-policy=local",
+        "--max-fps=" + str(fps),
+        "--video-bit-rate=4M",
+        "--clipboard-autosync"
+    ])
+    return args
+
+
 class BountyDex(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -51,6 +87,7 @@ class BountyDex(QMainWindow):
         self.adb = find_tool(ADB, "adb")
         self.scrcpy = find_tool(SCRCPY, "scrcpy")
         self.process = QProcess(self)
+        self.app_processes = []
         self.apps_data = []
         self.build_ui()
         self.refresh_devices()
@@ -92,9 +129,15 @@ class BountyDex(QMainWindow):
         caption.setObjectName("muted")
         sl.addWidget(caption)
         sl.addSpacing(25)
-        for item in ("⌂  Рабочий стол", "▦  Приложения", "◉  Подключение", "⚙  Настройки"):
+        for item, handler in (
+            ("⌂  Рабочий стол", self.go_home),
+            ("▦  Приложения", self.go_apps),
+            ("◉  Подключение", self.go_connection),
+            ("⚙  Настройки", self.go_settings)
+        ):
             b = QPushButton(item)
             b.setStyleSheet("text-align:left; padding:12px; background:transparent; border:0;")
+            b.clicked.connect(handler)
             sl.addWidget(b)
         sl.addStretch()
         note = QLabel("Тёмная тема\nPrototype 0.2")
@@ -102,16 +145,21 @@ class BountyDex(QMainWindow):
         sl.addWidget(note)
         outer.addWidget(sidebar)
 
-        main = QVBoxLayout()
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        main_page = QWidget()
+        main = QVBoxLayout(main_page)
+        main.setContentsMargins(0, 0, 0, 0)
         main.setSpacing(12)
-        outer.addLayout(main, 1)
+        self.main_scroll.setWidget(main_page)
+        outer.addWidget(self.main_scroll, 1)
 
         head = QHBoxLayout()
         titles = QVBoxLayout()
         title = QLabel("Рабочее пространство")
         title.setObjectName("heading")
         titles.addWidget(title)
-        sub = QLabel("Подключай телефон, открывай приложения и управляй ими с ПК.")
+        sub = QLabel("Открывай Android-приложения в отдельных окнах Windows, как в DeX.")
         sub.setObjectName("muted")
         titles.addWidget(sub)
         head.addLayout(titles)
@@ -235,24 +283,28 @@ class BountyDex(QMainWindow):
         al.addWidget(self.app_list)
 
         app_actions = QHBoxLayout()
-        app_note = QLabel("Показываются приложения с иконкой запуска, включая системные.")
+        app_note = QLabel("Двойной щелчок или кнопка запускают приложение в отдельном виртуальном окне Android.")
         app_note.setObjectName("muted")
+        app_note.setWordWrap(True)
         app_actions.addWidget(app_note, 1)
-        launch = QPushButton("Открыть приложение")
+        launch = QPushButton("Открыть в окне Dex")
         launch.setIcon(make_svg_icon(SVG["launch"]))
         launch.setObjectName("primary")
         launch.clicked.connect(self.launch_selected_app)
         app_actions.addWidget(launch)
+        phone_launch = QPushButton("На телефоне")
+        phone_launch.clicked.connect(self.launch_app_on_phone)
+        app_actions.addWidget(phone_launch)
         al.addLayout(app_actions)
         main.addWidget(apps_panel)
 
         grid = QGridLayout()
         grid.setSpacing(10)
         for i, (tag, heading, desc) in enumerate([
-            ("ЭКРАН", "Зеркалирование", "Экран Android открывается в окне scrcpy."),
-            ("УПРАВЛЕНИЕ", "Мышь и клавиатура", "Ввод передаётся на телефон через scrcpy."),
+            ("DESKTOP", "Окна приложений", "Каждое выбранное приложение запускается в отдельном виртуальном окне Android."),
+            ("УПРАВЛЕНИЕ", "Мышь и клавиатура", "Ввод передаётся в активное окно через scrcpy."),
             ("СВЯЗЬ", "USB и Wi-Fi", "Кабель или локальная беспроводная сеть."),
-            ("ПРИЛОЖЕНИЯ", "Каталог телефона", "Ищи и запускай доступные Android-приложения.")
+            ("ПРИЛОЖЕНИЯ", "Каталог телефона", "Ищи и открывай приложения из списка Samsung.")
         ]):
             card = QFrame()
             card.setObjectName("panel")
@@ -283,7 +335,7 @@ class BountyDex(QMainWindow):
         ll.addWidget(self.log)
         main.addWidget(log_panel)
 
-        self.write("BOUNTY Dex 0.3 запущен.")
+        self.write("BOUNTY Dex 0.4 запущен. Доступны зеркалирование экрана и отдельные окна приложений.")
         missing = []
         if not self.adb:
             missing.append("ADB")
@@ -297,6 +349,21 @@ class BountyDex(QMainWindow):
             self.status.setText("● Компоненты готовы")
             self.status.setStyleSheet("color:#65d69a;font-weight:700")
 
+
+    def go_home(self):
+        self.main_scroll.verticalScrollBar().setValue(0)
+
+    def go_apps(self):
+        self.main_scroll.ensureWidgetVisible(self.app_filter)
+        self.app_filter.setFocus()
+
+    def go_connection(self):
+        self.main_scroll.ensureWidgetVisible(self.devices)
+        self.devices.setFocus()
+
+    def go_settings(self):
+        self.main_scroll.ensureWidgetVisible(self.orientation)
+        self.orientation.setFocus()
 
     def show_guide(self):
         dialog = QDialog(self)
@@ -346,7 +413,7 @@ class BountyDex(QMainWindow):
         add_step(2, "Включи режим разработчика", "Найди «Номер сборки» и нажми на него 7 раз. При необходимости введи PIN-код.", taps)
         add_step(3, "Разреши USB-отладку", "Параметры разработчика → USB-отладка. Подключи кабель и подтверди запрос на экране телефона.", usb)
         add_step(4, "Запусти трансляцию", "В BOUNTY Dex нажми «Обновить», выбери Samsung и нажми «Зеркалировать USB». Экран телефона появится на ПК в отдельном окне; мышь и клавиатура будут управлять телефоном.", pc)
-        wifi_note = QLabel("<b>Горизонтальный экран:</b> перед подключением выбери «Горизонтально →» или «Горизонтально ←». Если приложение на телефоне само не поддерживает альбомный режим, поворот картинки на ПК не заставит его перестроить интерфейс. Для переключения ориентации самого телефона в окне scrcpy нажми Alt+R. <br><br><b>Размер:</b> 720p/1280p/1600p/1920p уменьшают или повышают разрешение потока, сохраняя пропорции. Для слабого ПК начни с 720p и 30 FPS.")
+        wifi_note = QLabel("<b>Окна DeX:</b> выбери приложение и нажми «Открыть в окне Dex». scrcpy создаёт отдельный виртуальный экран Android и запускает приложение в отдельном окне Windows. Размер окна можно менять мышью. Закрытие окна возвращает приложение на экран телефона. Возможность зависит от поддержки виртуальных дисплеев прошивкой и самим приложением. <br><br><b>Обычная трансляция:</b> «Зеркалировать USB» показывает весь экран телефона. Для слабого ПК начни с 720p и 30 FPS.")
         wifi_note.setWordWrap(True)
         wifi_note.setStyleSheet("background:#17263a;border:1px solid #2d4b6d;border-radius:12px;padding:13px;color:#dceaff;")
         column.addWidget(wifi_note)
@@ -401,11 +468,7 @@ class BountyDex(QMainWindow):
             return
         try:
             output = self.adb_call(["devices"])
-            found = []
-            for line in output.splitlines()[1:]:
-                parts = line.split()
-                if len(parts) > 1 and parts[1] == "device":
-                    found.append(parts[0])
+            found = parse_adb_devices(output)
             self.devices.addItems(found)
             self.write("Найдено подключённых устройств: " + str(len(found)))
             if found:
@@ -469,16 +532,26 @@ class BountyDex(QMainWindow):
             package_name = item.data(Qt.UserRole) or ""
             item.setHidden(needle not in item.text().casefold() and needle not in package_name.casefold())
 
-    def launch_selected_app(self):
-        serial = self.devices.currentText().strip()
-        item = self.app_list.currentItem()
-        if not serial:
+    def _selected_package(self):
+        if not self.devices.currentText().strip():
             QMessageBox.information(self, "Нет телефона", "Сначала подключи Android-телефон.")
-            return
+            return None
+        item = self.app_list.currentItem()
         if item is None:
             QMessageBox.information(self, "Приложение не выбрано", "Выбери приложение в списке.")
+            return None
+        return item.data(Qt.UserRole)
+
+    def launch_selected_app(self):
+        package_name = self._selected_package()
+        if package_name:
+            self.launch_app_window(package_name)
+
+    def launch_app_on_phone(self):
+        package_name = self._selected_package()
+        if not package_name:
             return
-        package_name = item.data(Qt.UserRole)
+        serial = self.devices.currentText().strip()
         try:
             output = self.adb_call([
                 "shell", "monkey", "-p", package_name,
@@ -486,10 +559,76 @@ class BountyDex(QMainWindow):
             ], serial=serial)
             if "No activities found" in output or "monkey aborted" in output.lower():
                 raise RuntimeError("У этого пакета нет доступного экрана запуска.")
-            self.write("Запущено приложение: " + package_name)
+            self.write("Приложение открыто на телефоне: " + package_name)
         except Exception as exc:
             self.write("Не удалось открыть " + package_name + ": " + str(exc))
             QMessageBox.warning(self, "Не удалось открыть приложение", str(exc))
+
+    def _read_app_process_output(self, process):
+        try:
+            output = bytes(process.readAllStandardOutput()).decode("utf-8", errors="replace").strip()
+            if output:
+                self.write(output[-2500:])
+        except Exception:
+            pass
+
+    def _app_window_finished(self, process, exit_code, exit_status):
+        self._read_app_process_output(process)
+        if process in self.app_processes:
+            self.app_processes.remove(process)
+        if exit_code != 0:
+            message = (
+                "Окно приложения завершилось с ошибкой. Возможно, прошивка телефона "
+                "не разрешает виртуальные дисплеи или это приложение не поддерживает такой режим. "
+                "Попробуй «Зеркалировать USB» для обычного управления экраном телефона."
+            )
+            self.write("Ошибка окна BOUNTY Dex (код " + str(exit_code) + ").")
+            QMessageBox.warning(self, "Не удалось открыть отдельное окно", message)
+        else:
+            self.write("Окно приложения закрыто.")
+        process.deleteLater()
+
+    def launch_app_window(self, package_name):
+        serial = self.devices.currentText().strip()
+        if not serial:
+            QMessageBox.information(self, "Нет телефона", "Сначала подключи Android-телефон.")
+            return
+        if not self.scrcpy:
+            QMessageBox.warning(self, "Нет scrcpy", "В комплекте Windows не найден scrcpy.")
+            return
+        try:
+            width = int(self.stream_size.currentData() or "1280")
+            fps = int(self.stream_fps.currentData() or "30")
+            args = build_virtual_app_args(serial, package_name, width, fps)
+            process = QProcess(self)
+            process.setProgram(self.scrcpy)
+            process.setArguments(args)
+            process.setProcessChannelMode(QProcess.MergedChannels)
+            process.readyReadStandardOutput.connect(
+                lambda p=process: self._read_app_process_output(p)
+            )
+            process.finished.connect(
+                lambda code, status, p=process: self._app_window_finished(p, code, status)
+            )
+            process.errorOccurred.connect(
+                lambda error, p=process: self.write("Ошибка процесса scrcpy: " + p.errorString())
+            )
+            self.app_processes.append(process)
+            process.start()
+            if process.waitForStarted(5000):
+                self.write(
+                    "Открываю " + package_name + " в отдельном окне "
+                    + str(width) + " px / " + str(fps) + " FPS."
+                )
+            else:
+                if process in self.app_processes:
+                    self.app_processes.remove(process)
+                error = process.errorString()
+                process.deleteLater()
+                raise RuntimeError(error or "Windows не смог запустить scrcpy.")
+        except Exception as exc:
+            self.write("Не удалось открыть окно " + package_name + ": " + str(exc))
+            QMessageBox.warning(self, "Ошибка запуска окна", str(exc))
 
     def launch_scrcpy(self, serial=None):
         if not self.scrcpy:
