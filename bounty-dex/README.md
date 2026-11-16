@@ -1,56 +1,48 @@
 # BOUNTY Dex
 
-Modern Android-to-Windows desktop companion with an Apple-inspired visual language, now using a dark macOS-style palette, rounded panels and clean typography.
+Dark Apple-inspired Android-to-Windows companion for Samsung phones, including Galaxy A16.
 
-## Project status
-Source code and automated build workflow. GitHub Actions builds a Windows EXE and Android debug APK and publishes them as workflow artifacts. They are not signed installers or Play Store releases.
+## Windows package
 
-## Windows 10/11 prototype
-The desktop app uses ADB + scrcpy to mirror and control an Android phone. It supports USB and ADB-over-Wi-Fi. The app browser queries Android launcher activities so it can list launchable preinstalled/system apps as well as user-installed apps, filter the list, and start a selected package. It uses package identifiers as display names where Android does not expose friendly labels through the basic ADB query.
-
-### Requirements
-- Windows 10 or 11
-- Python 3.10+
+The Windows release is distributed as a ZIP containing:
+- BOUNTY-Dex.exe
 - Android Platform Tools (ADB)
-- scrcpy for Windows (include the complete extracted scrcpy folder)
+- The complete Windows scrcpy folder and its runtime DLLs
 
-### Setup
-1. Install Python 3.10+.
-2. Download Android SDK Platform Tools and extract them into `tools/platform-tools/`.
-3. Download the Windows release of scrcpy and extract its complete contents into `tools/scrcpy/`.
-4. Open this folder in File Explorer, type `cmd` in the address bar, then run:
-   `py -3 -m pip install -r requirements.txt`
-5. Run `run-windows.bat`.
+This avoids asking users to download ADB and scrcpy separately. The ZIP size is determined by the actual app and required tools; it is not artificially padded to reach a number.
 
-### USB connection
-1. On Android, enable Developer options and USB debugging.
-2. Connect the phone using a data-capable USB cable.
-3. Accept the RSA debugging prompt on the phone.
-4. In BOUNTY Dex, refresh devices and choose Connect USB.
+## Install and run
 
-### Wi-Fi connection
-1. Initially connect by USB and accept the debugging prompt.
-2. Make sure the phone and PC are on the same Wi-Fi network.
-3. Find the phone's local IP address in Android Wi-Fi settings.
-4. Enter the IP in BOUNTY Dex and choose Connect Wi-Fi.
-5. The app switches ADB to TCP port 5555 and starts scrcpy.
+1. Download the **BOUNTY-Dex-Windows** ZIP from the successful GitHub Actions run.
+2. Extract the entire ZIP to a normal folder (do not run the EXE from inside the ZIP).
+3. Start BOUNTY-Dex.exe.
+4. On the phone, enable Developer options and USB debugging, connect by a data-capable USB cable, and accept the RSA prompt.
+5. Press Refresh, select the phone, then press Mirror USB.
 
-For newer Android versions, wireless debugging pairing may be required; the prototype's simple TCP/IP method is intended for devices that permit ADB TCP/IP mode.
+For Wi-Fi, first connect USB and enable ADB TCP/IP from the app. Enter the phone's IPv4 address and connect. Some newer Android versions require pairing through Android Wireless debugging first.
+
+## Build from source
+
+Requirements: Windows 10/11, Python 3.10+.
+
+```powershell
+cd bounty-dex/windows
+py -3 -m pip install -r requirements.txt
+py -3 bounty_dex.py
+```
+
+## Features
+
+- USB ADB device detection
+- ADB-over-Wi-Fi for devices that permit TCP/IP mode
+- Launcher-app listing, search and launch
+- Screen mirroring and mouse/keyboard control via scrcpy
+- Illustrated Russian setup guide and dark SVG interface
+
+## Limitations
+
+This is screen mirroring and remote input, not a full Samsung DeX implementation. The scrcpy screen opens in its own window. Android apps are still running on the phone; BOUNTY Dex does not make every app run in desktop/freeform mode. ADB and scrcpy are included in the Windows ZIP build. Never authorize ADB access on a computer you do not trust.
 
 ## Android companion
-The Android companion source is in `android/`. It provides a matching dark, Apple-inspired illustrated setup guide with inline SVG diagrams and icon navigation for Samsung USB debugging, Wi-Fi setup and Windows connection. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
 
-## Important limitations of prototype 0.2
-- The mirrored phone appears in a separate scrcpy window, not embedded in the BOUNTY Dex desktop shell.
-- This is screen mirroring and remote input, not a full Samsung DeX environment.
-- App streaming behavior depends on the Android device, Android version and OEM restrictions.
-- Never accept ADB authorization prompts on computers you do not trust.
-
-## Builds
-A push to `bounty-dex/**` or a manual run of **Actions → BOUNTY Dex builds** builds both platforms. Download `BOUNTY-Dex-Windows` for the Windows EXE and `BOUNTY-Dex-Android-APK` for the Android APK from the completed workflow run's Artifacts section. The app binaries are intended to stay lightweight (target under 50 MB each); actual sizes are determined by the build. ADB and scrcpy are separate dependencies and are not bundled into the EXE.
-
-## Roadmap
-- 0.1: Windows controller, USB/Wi-Fi ADB, screen mirroring and mouse/keyboard control.
-- 0.2: Embedded mirror window and connection diagnostics.
-- 0.3: File transfer, clipboard and desktop shell improvements.
-- 1.0: Packaged Windows installer and Android companion APK.
+The Android APK is a companion guide with illustrated USB/Wi-Fi setup instructions. It does not mirror the screen itself; the Windows application does that through ADB and scrcpy.
