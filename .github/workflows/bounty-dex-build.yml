@@ -31,20 +31,28 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      # The repository name ends with a dot. Use a safe checkout folder on Windows.
-      - uses: actions/checkout@v4
-        with:
-          path: src
+      # This repo name ends in a dot. Windows cannot create the default GITHUB_WORKSPACE path.
+      # Clone into D:\a\src instead of using actions/checkout on this runner.
+      - name: Get source in a Windows-safe folder
+        shell: pwsh
+        working-directory: D:\a
+        run: |
+          if (Test-Path 'D:\a\src') { Remove-Item 'D:\a\src' -Recurse -Force }
+          git clone --depth 1 'https://github.com/black1011f-bot/bounty-gaming-website..git' 'D:\a\src'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r src/bounty-dex/windows/requirements.txt pyinstaller
+        shell: pwsh
+        working-directory: D:\a\src\bounty-dex\windows
+        run: pip install -r requirements.txt pyinstaller
       - name: Build EXE
-        working-directory: src/bounty-dex/windows
+        shell: pwsh
+        working-directory: D:\a\src\bounty-dex\windows
         run: pyinstaller --noconfirm --clean --onefile --windowed --name BOUNTY-Dex bounty_dex.py
       - uses: actions/upload-artifact@v4
         with:
           name: BOUNTY-Dex-Windows
-          path: src/bounty-dex/windows/dist/BOUNTY-Dex.exe
+          path: D:\a\src\bounty-dex\windows\dist\BOUNTY-Dex.exe
+          if-no-files-found: error
           retention-days: 14
