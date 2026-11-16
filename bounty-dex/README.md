@@ -1,9 +1,9 @@
 # BOUNTY Dex
 
-Modern Android-to-Windows desktop companion inspired by Samsung DeX.
+Modern Android-to-Windows desktop companion with an Apple-inspired visual language (light surfaces, rounded cards and clean typography).
 
 ## Project status
-Prototype source code. This repository currently contains the Windows desktop controller and setup documentation. It does **not** yet contain signed/installable Windows or Android binaries.
+Source code and automated build workflow. GitHub Actions builds a Windows EXE and Android debug APK and publishes them as workflow artifacts. They are not signed installers or Play Store releases.
 
 ## Windows 10/11 prototype
 The desktop app uses ADB + scrcpy to mirror and control an Android phone. It supports USB and ADB-over-Wi-Fi.
@@ -38,13 +38,16 @@ The desktop app uses ADB + scrcpy to mirror and control an Android phone. It sup
 For newer Android versions, wireless debugging pairing may be required; the prototype's simple TCP/IP method is intended for devices that permit ADB TCP/IP mode.
 
 ## Android companion
-The Android companion APK is a separate deliverable and is not included as a binary yet. The initial mirroring/control path uses Android's built-in USB debugging authorization and scrcpy. A companion app can later provide pairing guidance, connection status and settings.
+The Android companion source is in `android/`. It provides a matching Apple-inspired setup/help interface. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
 
 ## Important limitations of prototype 0.1
 - The mirrored phone appears in a separate scrcpy window, not embedded in the BOUNTY Dex desktop shell.
 - This is screen mirroring and remote input, not a full Samsung DeX environment.
 - App streaming behavior depends on the Android device, Android version and OEM restrictions.
 - Never accept ADB authorization prompts on computers you do not trust.
+
+## Builds
+A push to `bounty-dex/**` or a manual run of **Actions → BOUNTY Dex builds** builds both platforms. Download `BOUNTY-Dex-Windows` for the Windows EXE and `BOUNTY-Dex-Android-APK` for the Android APK from the completed workflow run's Artifacts section. The app binaries are intended to stay lightweight (target under 50 MB each); actual sizes are determined by the build. ADB and scrcpy are separate dependencies and are not bundled into the EXE.
 
 ## Roadmap
 - 0.1: Windows controller, USB/Wi-Fi ADB, screen mirroring and mouse/keyboard control.
