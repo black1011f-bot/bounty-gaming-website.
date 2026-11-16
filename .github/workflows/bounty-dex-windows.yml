@@ -11,24 +11,35 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      # The repository name ends with a dot; use a Windows-safe checkout path.
+      - name: Get source in a Windows-safe folder
+        shell: pwsh
+        working-directory: D:\\a
+        run: |
+          if (Test-Path 'D:\\a\\src') { Remove-Item 'D:\\a\\src' -Recurse -Force }
+          git clone --depth 1 'https://github.com/black1011f-bot/bounty-gaming-website..git' 'D:\\a\\src'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install build dependencies
+        shell: pwsh
+        working-directory: D:\\a\\src\\bounty-dex\\windows
         run: |
           python -m pip install --upgrade pip
-          pip install -r bounty-dex/windows/requirements.txt pyinstaller
+          pip install -r requirements.txt pyinstaller
       - name: Package application
-        working-directory: bounty-dex/windows
+        shell: pwsh
+        working-directory: D:\\a\\src\\bounty-dex\\windows
         run: |
           pyinstaller --noconfirm --clean --windowed --name BOUNTY-Dex --collect-all PySide6 bounty_dex.py
       - name: Zip Windows build
+        shell: pwsh
+        working-directory: D:\\a\\src
         run: Compress-Archive -Path bounty-dex/windows/dist/BOUNTY-Dex -DestinationPath BOUNTY-Dex-Windows.zip
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
           name: BOUNTY-Dex-Windows
-          path: BOUNTY-Dex-Windows.zip
+          path: D:\\a\\src\\BOUNTY-Dex-Windows.zip
           if-no-files-found: error
           retention-days: 30
