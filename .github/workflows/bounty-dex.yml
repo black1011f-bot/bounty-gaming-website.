@@ -1,0 +1,59 @@
+name: BOUNTY Dex builds
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "bounty-dex/**"
+      - ".github/workflows/bounty-dex.yml"
+
+jobs:
+  windows:
+    name: Windows desktop EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r bounty-dex/windows/requirements.txt
+      - name: Build EXE
+        working-directory: bounty-dex/windows
+        run: pyinstaller --noconfirm --clean --onefile --windowed --name BOUNTY-Dex bounty_dex.py
+      - name: Enforce 50 MB target
+        shell: pwsh
+        run: |
+          $file = "bounty-dex/windows/dist/BOUNTY-Dex.exe"
+          $size = (Get-Item $file).Length
+          Write-Host "BOUNTY Dex EXE: $size bytes"
+          if ($size -ge 52428800) { throw "EXE exceeds the 50 MB target." }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOUNTY-Dex-Windows
+          path: bounty-dex/windows/dist/BOUNTY-Dex.exe
+          if-no-files-found: error
+
+  android:
+    name: Android companion APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build debug APK
+        working-directory: bounty-dex/android
+        run: gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOUNTY-Dex-Android-APK
+          path: bounty-dex/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
