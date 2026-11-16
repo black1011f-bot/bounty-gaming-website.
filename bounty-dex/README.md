@@ -1,12 +1,12 @@
 # BOUNTY Dex
 
-Modern Android-to-Windows desktop companion with an Apple-inspired visual language (light surfaces, rounded cards and clean typography).
+Modern Android-to-Windows desktop companion with an Apple-inspired visual language, now using a dark macOS-style palette, rounded panels and clean typography.
 
 ## Project status
 Source code and automated build workflow. GitHub Actions builds a Windows EXE and Android debug APK and publishes them as workflow artifacts. They are not signed installers or Play Store releases.
 
 ## Windows 10/11 prototype
-The desktop app uses ADB + scrcpy to mirror and control an Android phone. It supports USB and ADB-over-Wi-Fi.
+The desktop app uses ADB + scrcpy to mirror and control an Android phone. It supports USB and ADB-over-Wi-Fi. The app browser queries Android launcher activities so it can list launchable preinstalled/system apps as well as user-installed apps, filter the list, and start a selected package. It uses package identifiers as display names where Android does not expose friendly labels through the basic ADB query.
 
 ### Requirements
 - Windows 10 or 11
@@ -38,9 +38,9 @@ The desktop app uses ADB + scrcpy to mirror and control an Android phone. It sup
 For newer Android versions, wireless debugging pairing may be required; the prototype's simple TCP/IP method is intended for devices that permit ADB TCP/IP mode.
 
 ## Android companion
-The Android companion source is in `android/`. It provides a matching Apple-inspired setup/help interface. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
+The Android companion source is in `android/`. It provides a matching dark, Apple-inspired setup/help interface. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
 
-## Important limitations of prototype 0.1
+## Important limitations of prototype 0.2
 - The mirrored phone appears in a separate scrcpy window, not embedded in the BOUNTY Dex desktop shell.
 - This is screen mirroring and remote input, not a full Samsung DeX environment.
 - App streaming behavior depends on the Android device, Android version and OEM restrictions.
