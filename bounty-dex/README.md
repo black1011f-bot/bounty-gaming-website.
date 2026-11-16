@@ -34,7 +34,10 @@ The Android app is the phone-side companion and illustrated setup guide. The act
 3. Connect the phone to the PC with a data-capable USB cable and accept the RSA authorization prompt on the phone.
 4. Open BOUNTY Dex on Windows, press **Refresh**, select the phone, then press **Mirror USB**.
 
-For Wi-Fi, first connect by USB and enable ADB TCP/IP from the Windows app. Enter the phone's IPv4 address and connect. Some newer Android versions require pairing through Android Wireless debugging first.
+For Wi-Fi, the phone and PC must be on the same network.
+
+- **USB-to-Wi-Fi:** connect by USB, select the phone, enter its IPv4 address, and press **Подключить по Wi-Fi**. The app switches ADB to TCP/IP port 5555.
+- **Android 11+ Wireless debugging:** on the phone open Developer options → Wireless debugging → Pair device with pairing code. In BOUNTY Dex enter the pairing IP:port and six-digit code, then press **Сопрячь Wi-Fi**. Next enter the phone IP in the main Wi-Fi field, press **Подключить по Wi-Fi**, and enter the separate connection port shown on the Wireless debugging screen. The pairing port and connection port are different.
 
 ## Features
 
