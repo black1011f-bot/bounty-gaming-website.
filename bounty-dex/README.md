@@ -38,7 +38,7 @@ The desktop app uses ADB + scrcpy to mirror and control an Android phone. It sup
 For newer Android versions, wireless debugging pairing may be required; the prototype's simple TCP/IP method is intended for devices that permit ADB TCP/IP mode.
 
 ## Android companion
-The Android companion source is in `android/`. It provides a matching dark, Apple-inspired setup/help interface. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
+The Android companion source is in `android/`. It provides a matching dark, Apple-inspired illustrated setup guide with inline SVG diagrams and icon navigation for Samsung USB debugging, Wi-Fi setup and Windows connection. It does not itself stream the phone screen; mirroring and remote input are handled by the Windows app through ADB + scrcpy.
 
 ## Important limitations of prototype 0.2
 - The mirrored phone appears in a separate scrcpy window, not embedded in the BOUNTY Dex desktop shell.
