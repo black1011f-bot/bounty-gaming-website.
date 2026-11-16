@@ -9,32 +9,60 @@ on:
 
 jobs:
   windows:
-    name: Windows desktop EXE
+    name: Windows desktop package
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r bounty-dex/windows/requirements.txt
-      - name: Build EXE
+
+      - name: Build desktop executable
         working-directory: bounty-dex/windows
         run: pyinstaller --noconfirm --clean --onefile --windowed --name BOUNTY-Dex bounty_dex.py
-      - name: Enforce 50 MB target
+
+      - name: Download Android Platform Tools
         shell: pwsh
         run: |
-          $file = "bounty-dex/windows/dist/BOUNTY-Dex.exe"
-          $size = (Get-Item $file).Length
-          Write-Host "BOUNTY Dex EXE: $size bytes"
-          if ($size -ge 52428800) { throw "EXE exceeds the 50 MB target." }
+          New-Item -ItemType Directory -Force "bounty-dex/windows/dist/BOUNTY-Dex/tools/platform-tools" | Out-Null
+          Invoke-WebRequest "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "$env:RUNNER_TEMP/platform-tools.zip"
+          Expand-Archive "$env:RUNNER_TEMP/platform-tools.zip" "$env:RUNNER_TEMP/platform-tools" -Force
+          Copy-Item "$env:RUNNER_TEMP/platform-tools/platform-tools/*" "bounty-dex/windows/dist/BOUNTY-Dex/tools/platform-tools/" -Recurse -Force
+
+      - name: Download complete scrcpy Windows release
+        shell: pwsh
+        run: |
+          $release = Invoke-RestMethod "https://api.github.com/repos/Genymobile/scrcpy/releases/latest"
+          $asset = $release.assets | Where-Object { $_.name -match '^scrcpy-win64-.*\.zip$' } | Select-Object -First 1
+          if (-not $asset) { throw "Could not find the official scrcpy win64 ZIP asset." }
+          Invoke-WebRequest $asset.browser_download_url -OutFile "$env:RUNNER_TEMP/scrcpy.zip"
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/scrcpy-extract" | Out-Null
+          Expand-Archive "$env:RUNNER_TEMP/scrcpy.zip" "$env:RUNNER_TEMP/scrcpy-extract" -Force
+          $folder = Get-ChildItem "$env:RUNNER_TEMP/scrcpy-extract" -Directory | Select-Object -First 1
+          if (-not $folder) { throw "scrcpy archive did not contain its expected folder." }
+          New-Item -ItemType Directory -Force "bounty-dex/windows/dist/BOUNTY-Dex/tools/scrcpy" | Out-Null
+          Copy-Item "$($folder.FullName)/*" "bounty-dex/windows/dist/BOUNTY-Dex/tools/scrcpy/" -Recurse -Force
+
+      - name: Assemble portable package
+        shell: pwsh
+        run: |
+          Copy-Item "bounty-dex/windows/dist/BOUNTY-Dex.exe" "bounty-dex/windows/dist/BOUNTY-Dex/BOUNTY-Dex.exe"
+          Compress-Archive -Path "bounty-dex/windows/dist/BOUNTY-Dex/*" -DestinationPath "bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip" -Force
+          $size = (Get-Item "bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip").Length
+          Write-Host "Portable package size: $size bytes (includes ADB + scrcpy)"
+          if ($size -lt 20MB) { Write-Warning "Package is unexpectedly small; verify bundled ADB and scrcpy contents." }
+
       - uses: actions/upload-artifact@v4
         with:
           name: BOUNTY-Dex-Windows
-          path: bounty-dex/windows/dist/BOUNTY-Dex.exe
+          path: bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip
           if-no-files-found: error
+          compression-level: 0
 
   android:
     name: Android companion APK
