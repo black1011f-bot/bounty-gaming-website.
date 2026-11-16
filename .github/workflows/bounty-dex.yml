@@ -52,10 +52,19 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item "bounty-dex/windows/dist/BOUNTY-Dex.exe" "bounty-dex/windows/dist/BOUNTY-Dex/BOUNTY-Dex.exe"
-          Compress-Archive -Path "bounty-dex/windows/dist/BOUNTY-Dex/*" -DestinationPath "bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip" -Force
-          $size = (Get-Item "bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip").Length
-          Write-Host "Portable package size: $size bytes (includes ADB + scrcpy)"
-          if ($size -lt 20MB) { Write-Warning "Package is unexpectedly small; verify bundled ADB and scrcpy contents." }
+          @'
+          import pathlib, zipfile
+          root = pathlib.Path("bounty-dex/windows/dist/BOUNTY-Dex")
+          archive = pathlib.Path("bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip")
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
+              for file in root.rglob("*"):
+                  if file.is_file():
+                      z.write(file, file.relative_to(root.parent))
+          size = archive.stat().st_size
+          print(f"Portable package size: {size} bytes (includes ADB + scrcpy)")
+          if size < 50 * 1024 * 1024:
+              raise SystemExit("Portable package is below the requested 50 MiB minimum; check bundled dependencies.")
+          '@ | python -
 
       - uses: actions/upload-artifact@v4
         with:
