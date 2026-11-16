@@ -1,35 +1,40 @@
 # BOUNTY Dex
 
-Dark Apple-inspired Android-to-Windows companion for Samsung phones, including Galaxy A16.
+BOUNTY Dex has two separate downloads: a Windows desktop app and an Android companion app.
 
-## Windows package
+## Downloads
 
-The Windows release is distributed as a ZIP containing:
-- BOUNTY-Dex.exe
-- Android Platform Tools (ADB)
-- The complete Windows scrcpy folder and its runtime DLLs
+After GitHub Actions finishes successfully, both installers are published in the **[BOUNTY Dex Releases](https://github.com/black1011f-bot/bounty-gaming-website./releases/tag/bounty-dex-latest)** page:
 
-This avoids asking users to download ADB and scrcpy separately. The ZIP size is determined by the actual app and required tools; it is not artificially padded to reach a number.
+- **Windows 10/11:** `BOUNTY-Dex-Windows.zip` — portable desktop app with BOUNTY-Dex.exe, Android Platform Tools (ADB), and the complete Windows scrcpy folder with runtime files.
+- **Android:** `BOUNTY-Dex-Android.apk` — installable companion app with illustrated USB and Wi-Fi setup instructions.
 
-## Install and run
+The Windows ZIP is checked to be at least 50 MiB. It is not padded with dummy data; it contains the actual desktop app and bundled tools.
 
-1. Download the **BOUNTY-Dex-Windows** ZIP from the successful GitHub Actions run.
-2. Extract the entire ZIP to a normal folder (do not run the EXE from inside the ZIP).
-3. Start BOUNTY-Dex.exe.
-4. On the phone, enable Developer options and USB debugging, connect by a data-capable USB cable, and accept the RSA prompt.
-5. Press Refresh, select the phone, then press Mirror USB.
+## Install on Windows
 
-For Wi-Fi, first connect USB and enable ADB TCP/IP from the app. Enter the phone's IPv4 address and connect. Some newer Android versions require pairing through Android Wireless debugging first.
+1. Open the [Releases page](https://github.com/black1011f-bot/bounty-gaming-website./releases/tag/bounty-dex-latest).
+2. Download `BOUNTY-Dex-Windows.zip`.
+3. Extract the whole ZIP to a normal folder.
+4. Open the extracted `BOUNTY-Dex` folder and run `BOUNTY-Dex.exe`.
 
-## Build from source
+## Install on Android
 
-Requirements: Windows 10/11, Python 3.10+.
+1. Open the [Releases page](https://github.com/black1011f-bot/bounty-gaming-website./releases/tag/bounty-dex-latest) on your phone.
+2. Download `BOUNTY-Dex-Android.apk`.
+3. Open the downloaded APK and allow installation from this source if Android asks.
+4. Launch **BOUNTY Dex** from the app list.
 
-```powershell
-cd bounty-dex/windows
-py -3 -m pip install -r requirements.txt
-py -3 bounty_dex.py
-```
+The Android app is the phone-side companion and illustrated setup guide. The actual screen mirroring and desktop controls are performed by the Windows app.
+
+## Connect a Samsung phone
+
+1. Enable Developer options by tapping **Build number** seven times in Settings → About phone → Software information.
+2. In Developer options, enable **USB debugging**.
+3. Connect the phone to the PC with a data-capable USB cable and accept the RSA authorization prompt on the phone.
+4. Open BOUNTY Dex on Windows, press **Refresh**, select the phone, then press **Mirror USB**.
+
+For Wi-Fi, first connect by USB and enable ADB TCP/IP from the Windows app. Enter the phone's IPv4 address and connect. Some newer Android versions require pairing through Android Wireless debugging first.
 
 ## Features
 
@@ -37,12 +42,18 @@ py -3 bounty_dex.py
 - ADB-over-Wi-Fi for devices that permit TCP/IP mode
 - Launcher-app listing, search and launch
 - Screen mirroring and mouse/keyboard control via scrcpy
-- Illustrated Russian setup guide and dark SVG interface
+- Dark interface and illustrated Russian setup guide
 
-## Limitations
+## Important limitations
 
-This is screen mirroring and remote input, not a full Samsung DeX implementation. The scrcpy screen opens in its own window. Android apps are still running on the phone; BOUNTY Dex does not make every app run in desktop/freeform mode. ADB and scrcpy are included in the Windows ZIP build. Never authorize ADB access on a computer you do not trust.
+BOUNTY Dex currently provides screen mirroring and remote input; it is **not** a full Samsung DeX replacement. The mirrored phone screen opens in a separate scrcpy window. Android apps continue running on the phone; this app cannot force every Android app into desktop/freeform windows. Do not authorize ADB access on a computer you do not trust.
 
-## Android companion
+## Build from source
 
-The Android APK is a companion guide with illustrated USB/Wi-Fi setup instructions. It does not mirror the screen itself; the Windows application does that through ADB and scrcpy.
+Windows requirements: Windows 10/11 and Python 3.10+.
+
+```powershell
+cd bounty-dex/windows
+py -3 -m pip install -r requirements.txt
+py -3 bounty_dex.py
+```
