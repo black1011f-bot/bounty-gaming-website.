@@ -1,0 +1,32 @@
+name: Build BOUNTY Dex for Windows
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "bounty-dex/**"
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r bounty-dex/windows/requirements.txt
+      - name: Build executable
+        working-directory: bounty-dex/windows
+        run: pyinstaller --noconfirm --onefile --windowed --name BOUNTY-Dex bounty_dex.py
+      - name: Check executable size
+        shell: pwsh
+        run: |
+          $size = (Get-Item "bounty-dex/windows/dist/BOUNTY-Dex.exe").Length
+          Write-Host "BOUNTY Dex EXE size: $size bytes"
+          if ($size -ge 52428800) { Write-Error "EXE is 50 MB or larger." }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOUNTY-Dex-Windows
+          path: bounty-dex/windows/dist/BOUNTY-Dex.exe
+          if-no-files-found: error
