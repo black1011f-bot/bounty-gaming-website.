@@ -14,11 +14,16 @@ jobs:
   windows:
     name: Windows desktop package
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ${{ runner.temp }}
     steps:
-      # The repository name ends with a dot; use a safe checkout folder on Windows.
-      - uses: actions/checkout@v4
-        with:
-          path: source
+      # The repository name ends with a dot, which is invalid in a Windows
+      # workspace path. Clone it into a safe temporary directory instead.
+      - name: Clone source into a Windows-safe path
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch "${{ github.ref_name }}" "$env:GITHUB_SERVER_URL/${{ github.repository }}.git" "$env:RUNNER_TEMP/source"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -75,7 +80,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: BOUNTY-Dex-Windows
-          path: source/bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip
+          path: ${{ runner.temp }}/source/bounty-dex/windows/dist/BOUNTY-Dex-Windows.zip
           if-no-files-found: error
           compression-level: 0
 
