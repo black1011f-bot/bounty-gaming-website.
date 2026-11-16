@@ -507,7 +507,10 @@ class BountyDex(QMainWindow):
             self.write(result)
             if "successfully paired" not in result.lower():
                 raise RuntimeError(result or "ADB не подтвердил сопряжение.")
-            QMessageBox.information(self, "Сопряжение выполнено", "Теперь посмотри в настройках «Беспроводная отладка» основной IP:порт подключения (это другой порт, не порт сопряжения). Введи IP и порт в следующем шаге.")
+            # Clear the USB selection so connect_wifi asks for the dynamic
+            # Wireless debugging port instead of switching the phone to tcpip:5555.
+            self.devices.setCurrentIndex(-1)
+            QMessageBox.information(self, "Сопряжение выполнено", "Теперь посмотри в настройках «Беспроводная отладка» основной IP:порт подключения (это другой порт, не порт сопряжения). Введи IP выше и нажми «Подключить по Wi-Fi», затем введи основной порт.")
         except Exception as exc:
             self.write("Ошибка сопряжения Wi-Fi: " + str(exc))
             QMessageBox.warning(self, "Не удалось выполнить сопряжение", str(exc))
