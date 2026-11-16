@@ -14,14 +14,12 @@ jobs:
   windows:
     name: Windows desktop package
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: ${{ runner.temp }}
     steps:
       # The repository name ends with a dot, which is invalid in a Windows
       # workspace path. Clone it into a safe temporary directory instead.
       - name: Clone source into a Windows-safe path
         shell: pwsh
+        working-directory: ${{ runner.temp }}
         run: |
           git clone --depth 1 --branch "${{ github.ref_name }}" "$env:GITHUB_SERVER_URL/${{ github.repository }}.git" "$env:RUNNER_TEMP/source"
       - uses: actions/setup-python@v5
@@ -29,16 +27,18 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python dependencies
+        working-directory: ${{ runner.temp }}
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r source/bounty-dex/windows/requirements.txt
 
       - name: Build desktop executable
-        working-directory: source/bounty-dex/windows
+        working-directory: ${{ runner.temp }}/source/bounty-dex/windows
         run: pyinstaller --noconfirm --clean --onefile --windowed --name BOUNTY-Dex bounty_dex.py
 
       - name: Download Android Platform Tools
         shell: pwsh
+        working-directory: ${{ runner.temp }}
         run: |
           New-Item -ItemType Directory -Force "source/bounty-dex/windows/dist/BOUNTY-Dex/tools/platform-tools" | Out-Null
           Invoke-WebRequest "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "$env:RUNNER_TEMP/platform-tools.zip"
@@ -47,6 +47,7 @@ jobs:
 
       - name: Download complete scrcpy Windows release
         shell: pwsh
+        working-directory: ${{ runner.temp }}
         run: |
           $release = Invoke-RestMethod "https://api.github.com/repos/Genymobile/scrcpy/releases/latest"
           $asset = $release.assets | Where-Object { $_.name -match '^scrcpy-win64-.*\.zip$' } | Select-Object -First 1
@@ -61,6 +62,7 @@ jobs:
 
       - name: Assemble portable package
         shell: pwsh
+        working-directory: ${{ runner.temp }}
         run: |
           Copy-Item "source/bounty-dex/windows/dist/BOUNTY-Dex.exe" "source/bounty-dex/windows/dist/BOUNTY-Dex/BOUNTY-Dex.exe"
           @'
