@@ -12,7 +12,7 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-    QPlainTextEdit, QPushButton, QVBoxLayout, QWidget, QDialog, QScrollArea
+    QPlainTextEdit, QPushButton, QVBoxLayout, QWidget, QDialog, QScrollArea, QInputDialog
 )
 
 # In a PyInstaller build, keep tools beside the EXE, not in the temporary bundle.
@@ -160,6 +160,20 @@ class BountyDex(QMainWindow):
         wifi.clicked.connect(self.connect_wifi)
         wifirow.addWidget(wifi)
         pl.addLayout(wifirow)
+
+        pairrow = QHBoxLayout()
+        self.pair_address = QLineEdit()
+        self.pair_address.setPlaceholderText("Wireless debugging: IP:порт сопряжения")
+        pairrow.addWidget(self.pair_address, 1)
+        self.pair_code = QLineEdit()
+        self.pair_code.setPlaceholderText("Код сопряжения")
+        self.pair_code.setMaximumWidth(150)
+        pairrow.addWidget(self.pair_code)
+        pair = QPushButton("Сопрячь Wi-Fi")
+        pair.setIcon(make_svg_icon(SVG["wifi"]))
+        pair.clicked.connect(self.pair_wifi)
+        pairrow.addWidget(pair)
+        pl.addLayout(pairrow)
         main.addWidget(connect_panel)
 
         apps_panel = QFrame()
@@ -475,6 +489,29 @@ class BountyDex(QMainWindow):
             return
         self.launch_scrcpy(serial)
 
+    def pair_wifi(self):
+        endpoint = self.pair_address.text().strip()
+        code = self.pair_code.text().strip()
+        if not re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}:\d{1,5}", endpoint):
+            QMessageBox.warning(self, "Адрес сопряжения", "Введи адрес и порт из экрана «Беспроводная отладка», например 192.168.1.25:37123.")
+            return
+        try:
+            host, port_text = endpoint.rsplit(":", 1)
+            ipaddress.IPv4Address(host)
+            port = int(port_text)
+            if not 1 <= port <= 65535:
+                raise ValueError("Порт должен быть от 1 до 65535.")
+            if not re.fullmatch(r"\d{6}", code):
+                raise ValueError("Код сопряжения должен состоять из 6 цифр.")
+            result = self.adb_call(["pair", endpoint, code], timeout=35)
+            self.write(result)
+            if "successfully paired" not in result.lower():
+                raise RuntimeError(result or "ADB не подтвердил сопряжение.")
+            QMessageBox.information(self, "Сопряжение выполнено", "Теперь посмотри в настройках «Беспроводная отладка» основной IP:порт подключения (это другой порт, не порт сопряжения). Введи IP и порт в следующем шаге.")
+        except Exception as exc:
+            self.write("Ошибка сопряжения Wi-Fi: " + str(exc))
+            QMessageBox.warning(self, "Не удалось выполнить сопряжение", str(exc))
+
     def connect_wifi(self):
         address = self.ip.text().strip()
         try:
@@ -486,19 +523,27 @@ class BountyDex(QMainWindow):
             )
             return
 
-        usb_serial = self.devices.currentText().strip()
-        if not usb_serial or ":" in usb_serial:
-            QMessageBox.information(
-                self, "Сначала USB",
-                "Для первого включения ADB по Wi-Fi подключи телефон кабелем, выбери USB-устройство и повтори."
-            )
-            return
         try:
-            self.adb_call(["tcpip", "5555"], serial=usb_serial)
-            result = self.adb_call(["connect", address + ":5555"])
+            selected = self.devices.currentText().strip()
+            if selected and ":" not in selected:
+                # USB path: switch the authorized device to ADB TCP/IP.
+                self.adb_call(["tcpip", "5555"], serial=selected)
+                port = 5555
+            else:
+                port_text, ok = QInputDialog.getText(
+                    self, "Порт Wi-Fi ADB",
+                    "Введи основной порт из экрана «Беспроводная отладка» (не порт сопряжения):",
+                    text="5555"
+                )
+                if not ok:
+                    return
+                port = int(port_text)
+                if not 1 <= port <= 65535:
+                    raise ValueError("Порт должен быть от 1 до 65535.")
+            wifi_serial = address + ":" + str(port)
+            result = self.adb_call(["connect", wifi_serial])
             self.write(result)
             self.refresh_devices()
-            wifi_serial = address + ":5555"
             index = self.devices.findText(wifi_serial)
             if index >= 0:
                 self.devices.setCurrentIndex(index)
@@ -507,12 +552,12 @@ class BountyDex(QMainWindow):
             else:
                 QMessageBox.warning(
                     self, "Устройство не найдено",
-                    "ADB не добавил Wi-Fi-устройство в список. Проверь IP и подключение к одной сети."
+                    "ADB не добавил Wi-Fi-устройство в список. Проверь IP, порт и что телефон и ПК в одной сети."
                 )
         except Exception as exc:
             QMessageBox.warning(
                 self, "Не удалось подключиться",
-                str(exc) + "\nНа некоторых новых версиях Android сначала требуется сопряжение Wireless debugging."
+                str(exc) + "\nДля Android 11+ сначала используй «Беспроводная отладка» → «Сопряжение с кодом»."
             )
 
 
