@@ -174,6 +174,33 @@ class BountyDex(QMainWindow):
         pair.clicked.connect(self.pair_wifi)
         pairrow.addWidget(pair)
         pl.addLayout(pairrow)
+
+        streamrow = QHBoxLayout()
+        streamrow.addWidget(QLabel("Ориентация"))
+        self.orientation = QComboBox()
+        self.orientation.addItem("Горизонтально →", "90")
+        self.orientation.addItem("Горизонтально ←", "270")
+        self.orientation.addItem("Как на телефоне", "0")
+        self.orientation.addItem("Перевёрнуто", "180")
+        streamrow.addWidget(self.orientation, 1)
+        streamrow.addWidget(QLabel("Размер"))
+        self.stream_size = QComboBox()
+        self.stream_size.addItem("Экономно · 720p", "720")
+        self.stream_size.addItem("Сбалансировано · 1280p", "1280")
+        self.stream_size.addItem("Чётко · 1600p", "1600")
+        self.stream_size.addItem("Максимум · 1920p", "1920")
+        streamrow.addWidget(self.stream_size, 1)
+        streamrow.addWidget(QLabel("FPS"))
+        self.stream_fps = QComboBox()
+        self.stream_fps.addItem("30 FPS", "30")
+        self.stream_fps.addItem("45 FPS", "45")
+        self.stream_fps.addItem("60 FPS", "60")
+        streamrow.addWidget(self.stream_fps)
+        pl.addLayout(streamrow)
+        stream_hint = QLabel("Трансляция экрана телефона на ПК в реальном времени. Размер сохраняет пропорции экрана.")
+        stream_hint.setObjectName("muted")
+        stream_hint.setWordWrap(True)
+        pl.addWidget(stream_hint)
         main.addWidget(connect_panel)
 
         apps_panel = QFrame()
@@ -318,8 +345,12 @@ class BountyDex(QMainWindow):
         add_step(1, "Открой параметры телефона", "Настройки → Сведения о телефоне → Сведения о ПО.", phone)
         add_step(2, "Включи режим разработчика", "Найди «Номер сборки» и нажми на него 7 раз. При необходимости введи PIN-код.", taps)
         add_step(3, "Разреши USB-отладку", "Параметры разработчика → USB-отладка. Подключи кабель и подтверди запрос на экране телефона.", usb)
-        add_step(4, "Запусти зеркалирование", "В BOUNTY Dex нажми «Обновить», выбери Samsung и нажми «Зеркалировать USB».", pc)
-        wifi_note = QLabel("<b>Wi-Fi:</b> телефон и ПК должны быть в одной сети. Сначала подключи USB, затем введи IP телефона в поле Wi-Fi. На новых версиях Android может потребоваться сопряжение в «Беспроводной отладке».")
+        add_step(4, "Запусти трансляцию", "В BOUNTY Dex нажми «Обновить», выбери Samsung и нажми «Зеркалировать USB». Экран телефона появится на ПК в отдельном окне; мышь и клавиатура будут управлять телефоном.", pc)
+        wifi_note = QLabel("<b>Горизонтальный экран:</b> перед подключением выбери «Горизонтально →» или «Горизонтально ←». Если приложение на телефоне само не поддерживает альбомный режим, поворот картинки на ПК не заставит его перестроить интерфейс. Для переключения ориентации самого телефона в окне scrcpy нажми Alt+R. <br><br><b>Размер:</b> 720p/1280p/1600p/1920p уменьшают или повышают разрешение потока, сохраняя пропорции. Для слабого ПК начни с 720p и 30 FPS.")
+        wifi_note.setWordWrap(True)
+        wifi_note.setStyleSheet("background:#17263a;border:1px solid #2d4b6d;border-radius:12px;padding:13px;color:#dceaff;")
+        column.addWidget(wifi_note)
+        wifi_note = QLabel("<b>Wi-Fi:</b> телефон и ПК должны быть в одной сети. Сначала подключи USB, затем введи IP телефона в поле Wi-Fi. На Android 16 / One UI 8.5 используй «Беспроводная отладка» → «Сопряжение с кодом», затем введи отдельный основной порт подключения.")
         wifi_note.setWordWrap(True)
         wifi_note.setStyleSheet("background:#17263a;border:1px solid #2d4b6d;border-radius:12px;padding:13px;color:#dceaff;")
         column.addWidget(wifi_note)
@@ -470,12 +501,24 @@ class BountyDex(QMainWindow):
         if self.process.state() != QProcess.NotRunning:
             self.write("Окно зеркалирования уже запущено.")
             return
-        args = (["-s", serial] if serial else []) + ["--window-title", "BOUNTY Dex — Android"]
+        # Orientation rotates the mirrored picture on the PC; it does not
+        # force every Android app to support landscape mode.
+        orientation = self.orientation.currentData() if hasattr(self, "orientation") else "90"
+        max_size = self.stream_size.currentData() if hasattr(self, "stream_size") else "1280"
+        max_fps = self.stream_fps.currentData() if hasattr(self, "stream_fps") else "30"
+        args = (["-s", serial] if serial else []) + [
+            "--window-title", "BOUNTY Dex — Android",
+            "--orientation=" + str(orientation),
+            "--max-size=" + str(max_size),
+            "--max-fps=" + str(max_fps),
+            "--stay-awake",
+            "--clipboard-autosync"
+        ]
         self.process.setProgram(self.scrcpy)
         self.process.setArguments(args)
         self.process.start()
         if self.process.waitForStarted(3000):
-            self.write("Окно зеркалирования запущено.")
+            self.write("Трансляция экрана запущена: ориентация " + str(orientation) + "°, до " + str(max_size) + " px, " + str(max_fps) + " FPS.")
         else:
             self.write("Не удалось запустить scrcpy: " + self.process.errorString())
 
